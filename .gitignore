@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.DS_Store
+src-tauri/target/
+src-tauri/gen/
+*.log
+.env
+*.lock
+gitpush.md
