@@ -1,220 +1,454 @@
-# 🚀 Tauri + React + Vite Starter (v2)
+# Tauri + Python + React Integration
 
-A modern desktop application boilerplate using **Tauri v2**, **React**, and **Vite**.  
-Fast, secure, and lightweight — perfect for building production-ready cross-platform apps.
+A desktop application demonstrating Python backend integration with Tauri + React frontend. This example shows two types of Python functions: a simple calculation function and a function that accepts user input.
+
+## 🏗️ Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     React Frontend (UI)                     │
+│              Button clicks & user input forms               │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+                    Tauri invoke() API
+                            │
+┌───────────────────────────▼─────────────────────────────────┐
+│                    Rust Backend (Tauri)                     │
+│              Tauri commands bridge to Python                │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+                  std::process::Command
+                            │
+┌───────────────────────────▼─────────────────────────────────┐
+│                   Python Functions (Logic)                  │
+│          Command dispatcher executes specific function      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## 🔄 How It Works
+
+### Example 1: Simple Function (No Arguments)
+
+**Flow: Add Function**
+
+1. **React**: User clicks "Call Add Function" button
+
+   ```javascript
+   const pythonResult = await invoke("add");
+   ```
+
+2. **Rust**: `add()` command receives the call
+
+   ```rust
+   #[tauri::command]
+   fn add() -> String {
+       // Runs: python main.py add
+   }
+   ```
+
+3. **Python**: Command dispatcher routes to `add()` function
+
+   ```python
+   def add():
+       return "Addition: 5 + 3 = 8"
+   ```
+
+4. **Result**: String flows back → Rust → React → Display
 
 ---
 
-## 🧰 Prerequisites
+### Example 2: Function with Arguments
 
-Make sure you have the following installed:
+**Flow: PrintName Function**
 
-- **Node.js** ≥ 18.x
-- **Rust & Cargo** → [Install Rust](https://rustup.rs)
-- **Tauri CLI (v2)**
+1. **React**: User enters name "Alice" and clicks button
 
-  ```bash
-  cargo install tauri-cli --version "^2.0.0"
-  ```
+   ```javascript
+   const pythonResult = await invoke("add_name", { name: "Alice" });
+   ```
 
-- (Windows only) **Visual Studio Build Tools** or **MSVC**
-- (Linux) `libgtk-3-dev` and `libwebkit2gtk-4.1-dev`
-- (macOS) Xcode Command Line Tools
+2. **Rust**: `add_name(name)` command receives the string
 
----
+   ```rust
+   #[tauri::command]
+   fn add_name(name: String) -> String {
+       // Runs: python main.py printname Alice
+   }
+   ```
 
-## ⚙️ Create a New Project
+3. **Python**: Command dispatcher passes argument to function
 
-### 1️⃣ Create React + Vite frontend
+   ```python
+   def printname(name: str):
+       return "Name: " + name
+   ```
 
-```bash
-npm create vite@latest ui -- --template react
-cd ui
-npm install
-```
-
-Test the frontend (optional):
-
-```bash
-npm run dev
-```
-
-You should see Vite’s default page at [http://localhost:5173](http://localhost:5173).
-
----
-
-### 2️⃣ Initialize Tauri backend
-
-From your **root project folder**:
-
-```bash
-cd ..
-cargo tauri init
-```
-
-Answer prompts like this 👇
-
-```
-✔ What is your app name? · MyApp
-✔ Where is your frontend code? · ../ui/dist
-✔ What is the url of your dev server? · http://localhost:5173
-✔ What is your frontend dev command? · npm run dev
-✔ What is your build command? · npm run build
-```
-
-This creates the backend folder:
-
-```
-src-tauri/
-```
-
----
-
-### 3️⃣ Install Tauri frontend API package
-
-In your React app folder:
-
-```bash
-cd ui
-npm install @tauri-apps/api
-```
-
----
+4. **Result**: "Name: Alice" flows back → Rust → React → Display
 
 ## 📁 Project Structure
 
 ```
-project-root/
-├─ src-tauri/          # Rust backend
-│  ├─ src/
-│  │  ├─ lib.rs        # Tauri logic + commands
-│  │  └─ main.rs
-│  └─ tauri.conf.json  # App configuration
-└─ ui/                 # React + Vite frontend
-   ├─ src/
-   │  ├─ App.jsx
-   │  └─ main.jsx
-   ├─ index.html
-   └─ package.json
+.
+├── src-tauri/
+│   ├── src/
+│   │   ├── lib.rs           # Tauri commands (add, add_name)
+│   │   └── main.rs          # Entry point
+│   ├── Cargo.toml           # Rust dependencies
+│   └── tauri.conf.json      # Tauri config + Python bundling
+├── python/
+│   └── app/
+│       └── main.py          # Python functions + command dispatcher
+└── ui/
+    └── src/
+        └── App.jsx          # React UI with buttons and input
 ```
+
+## 💻 Code Walkthrough
+
+### 1. Python Backend (`main.py`)
+
+```python
+def add():
+    return "Addition: 5 + 3 = 8"
+
+def printname(name: str):
+    return "Name: " + name
+
+# Command dispatcher at bottom of file
+if __name__ == "__main__":
+    commands = {
+        "add": lambda: add(),
+        "printname": lambda: printname(sys.argv[2]) if len(sys.argv) > 2 else "Missing name"
+    }
+
+    command = sys.argv[1] if len(sys.argv) > 1 else None
+    if command in commands:
+        print(commands[command]())
+```
+
+**Key Points:**
+
+- Each function is simple and focused
+- Command dispatcher maps string commands to functions
+- Arguments come from `sys.argv[2]`, `sys.argv[3]`, etc.
+- Function output is printed to stdout
 
 ---
 
-## 🦀 Example: Calling Rust from React
-
-### `src-tauri/src/lib.rs`
+### 2. Rust Bridge (`lib.rs`)
 
 ```rust
 #[tauri::command]
-fn get_user() -> String {
-    println!("User command called");
-    "User command executed!".into()
+fn add() -> String {
+    let exe_dir: PathBuf = std::env::current_exe()
+        .expect("failed to get exe path")
+        .parent()
+        .unwrap()
+        .to_path_buf();
+
+    let python_exe = exe_dir.join("python/python.exe");
+    let python_script = exe_dir.join("python/app/main.py");
+
+    let output = Command::new(python_exe)
+        .arg(python_script)
+        .arg("add")              // Command name
+        .output()
+        .expect("failed to execute python");
+
+    String::from_utf8_lossy(&output.stdout).to_string()
 }
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
+#[tauri::command]
+fn add_name(name: String) -> String {
+    // ... same setup ...
+
+    let output = Command::new(python_exe)
+        .arg(python_script)
+        .arg("printname")        // Command name
+        .arg(name)               // Argument
+        .output()
+        .expect("failed to execute python");
+
+    String::from_utf8_lossy(&output.stdout).to_string()
+}
+
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![get_user])
+        .invoke_handler(tauri::generate_handler![add, add_name])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
 ```
 
-### `ui/src/App.jsx`
+**Key Points:**
 
-```jsx
-import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+- Each Rust function is a `#[tauri::command]`
+- Locates bundled Python executable relative to app
+- Executes Python with command name and optional arguments
+- Returns stdout as string to frontend
+- All commands registered in `invoke_handler`
 
+---
+
+### 3. React Frontend (`App.jsx`)
+
+```javascript
 function App() {
-  const [msg, setMsg] = useState("Nothing yet");
+  const [result, setResult] = useState("");
+  const [name, setName] = useState("");
 
-  async function handleClick() {
-    const res = await invoke("get_user");
-    setMsg(res);
+  async function callAdd() {
+    const pythonResult = await invoke("add"); // No arguments
+    setResult(pythonResult);
+  }
+
+  async function callPrintName() {
+    const pythonResult = await invoke("add_name", { name: name }); // With argument
+    setResult(pythonResult);
   }
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>Tauri + React + Vite</h1>
-      <button onClick={handleClick}>Call Rust</button>
-      <p>{msg}</p>
+    <div>
+      <button onClick={callAdd}>Call Add Function</button>
+
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Enter your name"
+      />
+      <button onClick={callPrintName}>Call PrintName Function</button>
+
+      <div>{result}</div>
     </div>
   );
 }
-
-export default App;
 ```
 
----
+**Key Points:**
 
-## 🧑‍💻 Development
+- `invoke('command_name')` calls Rust commands
+- Arguments passed as object: `{ name: name }`
+- Results displayed in UI
+- Loading states prevent multiple simultaneous calls
 
-From the **root directory**:
+## 🎯 Adding Your Own Function
+
+### Step 1: Add Python Function
+
+```python
+# In main.py
+def multiply(a, b):
+    return f"Multiplication: {a} × {b} = {float(a) * float(b)}"
+```
+
+### Step 2: Register in Command Dispatcher
+
+```python
+# In main.py command dispatcher
+commands = {
+    "add": lambda: add(),
+    "printname": lambda: printname(sys.argv[2]) if len(sys.argv) > 2 else "Missing name",
+    "multiply": lambda: multiply(sys.argv[2], sys.argv[3]) if len(sys.argv) > 3 else "Missing args"
+}
+```
+
+### Step 3: Create Rust Command
+
+```rust
+// In lib.rs
+#[tauri::command]
+fn multiply_numbers(num1: String, num2: String) -> String {
+    let exe_dir: PathBuf = std::env::current_exe()
+        .expect("failed to get exe path")
+        .parent()
+        .unwrap()
+        .to_path_buf();
+
+    let python_exe = exe_dir.join("python/python.exe");
+    let python_script = exe_dir.join("python/app/main.py");
+
+    let output = Command::new(python_exe)
+        .arg(python_script)
+        .arg("multiply")
+        .arg(num1)
+        .arg(num2)
+        .output()
+        .expect("failed to execute python");
+
+    String::from_utf8_lossy(&output.stdout).to_string()
+}
+
+// Register it
+.invoke_handler(tauri::generate_handler![add, add_name, multiply_numbers])
+```
+
+### Step 4: Call from React
+
+```javascript
+async function callMultiply() {
+  const result = await invoke("multiply_numbers", {
+    num1: "6",
+    num2: "7",
+  });
+  setResult(result);
+}
+```
+
+## ⚙️ Setup & Installation
+
+### Prerequisites
+
+- Cargo & Tauri CLI
+- Node.js & npm
+- Rust (latest stable)
+- Python 3.8+
+
+### Development Setup
 
 ```bash
+# Install frontend dependencies
+cd ui
+npm install
+
+# Run development mode
+cd ..
 cargo tauri dev
 ```
 
-This will:
+## Embedded Python Setup (Already Done in Template)
 
-- Run your React Vite dev server (`npm run dev`)
-- Run the Tauri backend
-- Open the app window connected to your live frontend
+This template ships with:
+
+- Official **Python embeddable distribution**
+- `pip` installed locally
+- All packages stored inside `src-tauri/python`
+
+### Install additional Python packages
+
+```powershell
+src-tauri\python\python.exe -m pip install <package-name>
+```
+
+Examples:
+
+```powershell
+src-tauri\python\python.exe -m pip install requests numpy
+```
+
+All dependencies remain **self‑contained**.
 
 ---
 
-## 🏗️ Building for Production
+### Building for Production
 
 ```bash
 cargo tauri build
 ```
 
-This will:
+The build bundles:
 
-- Build your React app (`npm run build`)
-- Package everything into a native `.exe`, `.app`, or `.deb` installer (depending on OS)
-- Output is found in:
+- Compiled Rust code
+- React frontend
+- Python runtime from `python/` folder
+- Creates platform-specific installer
 
-  ```
-  src-tauri/target/release/bundle/
-  ```
+## 🔧 Configuration
+
+### Bundle Python (`tauri.conf.json`)
+
+```json
+{
+  "bundle": {
+    "resources": ["python"]
+  }
+}
+```
+
+This includes the entire `python/` folder in the final executable.
+
+### Python Path Resolution
+
+The app finds Python relative to the executable location:
+
+```rust
+let exe_dir = std::env::current_exe().parent().to_path_buf();
+let python_exe = exe_dir.join("python/python.exe");
+```
+
+This makes the app portable - no system Python required.
+
+## 🎯 Real-World Use Cases
+
+### Machine Learning
+
+```python
+def predict(data):
+    model = load_model('model.pkl')
+    return model.predict(data)
+```
+
+### Data Processing
+
+```python
+def analyze_csv(filepath):
+    df = pd.read_csv(filepath)
+    return df.describe().to_json()
+```
+
+### API Calls
+
+```python
+def fetch_weather(city):
+    response = requests.get(f"api.weather.com/{city}")
+    return response.json()
+```
+
+### Image Processing
+
+```python
+def resize_image(path, width, height):
+    img = Image.open(path)
+    img = img.resize((width, height))
+    return "Image resized successfully"
+```
+
+## 🐛 Troubleshooting
+
+| Issue                | Solution                                                              |
+| -------------------- | --------------------------------------------------------------------- |
+| Python not found     | Ensure `python/` is in `src-tauri/` and `tauri.conf.json` includes it |
+| Module import errors | Bundle required packages in `python/Lib/site-packages/`               |
+| Permission errors    | On macOS/Linux, make Python executable: `chmod +x python/python`      |
+| Command not found    | Check command name matches in Python dispatcher and Rust function     |
+
+## 📝 Why This Pattern?
+
+**Advantages:**
+
+- ✅ Simple, predictable data flow
+- ✅ Each component has one responsibility
+- ✅ Easy to add new functions
+- ✅ Leverage Python's ecosystem (NumPy, pandas, ML libraries)
+- ✅ Native desktop performance
+- ✅ Cross-platform (Windows, macOS, Linux)
+
+**Best For:**
+
+- Wrapping Python scripts in desktop UI
+- Data science applications
+- Machine learning inference
+- File processing automation
+- API integration tools
+
+## 📚 Resources
+
+- [Tauri Documentation](https://tauri.app)
+
+## 📄 License
+
+MIT License
 
 ---
 
-## ⚡ Common Commands
-
-| Task                 | Command                |
-| -------------------- | ---------------------- |
-| Run dev mode         | `cargo tauri dev`      |
-| Build production app | `cargo tauri build`    |
-| Clean project        | `cargo clean`          |
-| Run only frontend    | `cd ui && npm run dev` |
-
----
-
-## 🧩 Useful Tips
-
-- You can call any Rust function from JS using:
-
-  ```js
-  invoke("command_name", { argName: value });
-  ```
-
-- Want multiple pages? Use **React Router** for SPA-style routing.
-- Want multiple native windows? Use `WindowBuilder` in Rust.
-
----
-
-## 🧠 Resources
-
-- 📘 [Tauri v2 Docs](https://v2.tauri.app)
-- ⚛️ [React Docs](https://react.dev)
-- ⚡ [Vite Docs](https://vitejs.dev)
-- 🦀 [Rust Language](https://www.rust-lang.org/)
-
----
-
-## 🏁 License
-
-MIT © 2025 [nitiksh](https://nitiksh.ntxm.org/)
+**Built with**: Tauri 2.x | React 18 | Rust | Python 3.x  
+**Made by**: [Nitiksh](https://www.nitiksh.ntxm.org)

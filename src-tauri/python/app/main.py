@@ -1,28 +1,25 @@
 import sys
-import json
 
 
-def main():
-    # Get input from command line arguments
-    if len(sys.argv) > 2:
-        try:
-            num1 = float(sys.argv[1])
-            num2 = float(sys.argv[2])
-            result = num1 + num2
-            data = {
-                "num1": num1,
-                "num2": num2,
-                "result": result,
-                "operation": "addition",
-                "status": "success",
-            }
-        except ValueError:
-            data = {"status": "error", "message": "Invalid numbers provided"}
-    else:
-        data = {"status": "error", "message": "Please provide two numbers"}
+def add():
+    return "Addition: 5 + 3 = 8"
 
-    print(json.dumps(data))
+
+def printname(name: str):
+    return "Name: " + name
 
 
 if __name__ == "__main__":
-    main()
+    commands = {
+        "add": lambda: add(),
+        "printname": lambda: (
+            printname(sys.argv[2]) if len(sys.argv) > 2 else "Missing name argument"
+        ),
+    }
+
+    command = sys.argv[1] if len(sys.argv) > 1 else None
+
+    if command in commands:
+        print(commands[command]())
+    else:
+        print("No command provided" if command is None else "Unknown command")
