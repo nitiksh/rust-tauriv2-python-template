@@ -320,7 +320,28 @@ cargo tauri dev
 This template ships with:
 
 - Official **Python embeddable distribution**
-- `pip` installed locally
+- `pip` installed locally (already included in this template and if not included, follow the steps below) :
+
+#### If have to set up manually, follow these steps to install pip:
+
+```powershell
+src-tauri\python\python.exe src-tauri\python\get-pip.py
+```
+
+_Download `get-pip.py` from [https://bootstrap.pypa.io/get-pip.py](https://bootstrap.pypa.io/get-pip.py) and place it in `src-tauri/python/`_.
+
+#### Verify pip installation:
+
+```powershell
+src-tauri\python\python.exe -m pip --version
+```
+
+#### Verify installed packages:
+
+```powershell
+src-tauri\python\python.exe -m pip list
+```
+
 - All packages stored inside `src-tauri/python`
 
 ### Install additional Python packages
@@ -333,6 +354,12 @@ Examples:
 
 ```powershell
 src-tauri\python\python.exe -m pip install requests numpy
+```
+
+To verify installed packages (Show the list of all the installed packages):
+
+```powershell
+src-tauri\python\python.exe -m pip list
 ```
 
 All dependencies remain **self‑contained**.
