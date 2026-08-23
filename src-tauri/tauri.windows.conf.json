@@ -1,0 +1,5 @@
+{
+  "bundle": {
+    "resources": ["python-windows", "python-app"]
+  }
+}

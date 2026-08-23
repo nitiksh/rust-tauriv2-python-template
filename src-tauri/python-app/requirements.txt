@@ -1,0 +1,9 @@
+# Shared app dependencies — install into EACH platform runtime AFTER enabling pip.
+# Runtimes ship clean (no packages). See:
+#   python-windows/README.md
+#   python-macos/README.md
+#   python-linux/README.md
+#
+# Examples (uncomment to use):
+# requests>=2.32.0
+# numpy>=2.0.0

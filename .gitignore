@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.DS_Store
+src-tauri/target/
+src-tauri/gen/
+*.log
+.env
+gitpush.md
+
+# Embedded Python runtimes are NOT in git (too large for GitHub).
+# Fetch on each machine with scripts/setup-python-*.{ps1,sh}
+# Only the README in each folder is tracked.
+src-tauri/python-windows/**
+!src-tauri/python-windows/README.md
+src-tauri/python-macos/**
+!src-tauri/python-macos/README.md
+src-tauri/python-linux/**
+!src-tauri/python-linux/README.md
+
+# Legacy single-folder Windows runtime (replaced by python-windows/)
+src-tauri/python/
